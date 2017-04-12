@@ -1,8 +1,8 @@
 'use strict';
 
 var webdriver = require('wd');
-var SauceLabs = require('saucelabs');
 var series = require('async/series');
+var SauceLabs = require('saucelabs');
 
 // status of tests on all platforms
 var allPlatformsPassed = true;
@@ -19,51 +19,51 @@ var account = new SauceLabs({
 	password: process.env.SAUCE_ACCESS_KEY
 });
 
-// https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities
-var platforms = [{
-	browserName: 'firefox',
-	platform: 'Windows 10',
-	version: '50.0'
-}, {
-	browserName: 'firefox',
-	platform: 'OS X 10.11',
-	version: '50.0'
-}, {
-	browserName: 'googlechrome',
-	platform: 'Windows 10'
-}, {
-	browserName: 'googlechrome',
-	platform: 'OS X 10.11'
-}, {
-	browserName: 'safari',
-	platform: 'OS X 10.11',
-	version: '10.0'
-}, {
-	browserName: 'MicrosoftEdge',
-	platform: 'Windows 10'
-}, {
-	browserName: 'internet explorer',
-	platform: 'Windows 10',
-	version: '11.0'
-}, {
-	browserName: 'internet explorer',
-	platform: 'Windows 8',
-	version: '10.0'
-}, {
-	browserName: 'internet explorer',
-	platform: 'Windows 7',
-	version: '9'
-}, {
-	browserName: 'Safari',
-	'appium-version': '1.6.0',
-	platformName: 'iOS',
-	platformVersion: '10.0',
-	deviceName: 'iPhone 7 Simulator'
-}];
+const DEFAULT_TEST_NAME = 'qunit tests';
+const SAUCELABS_URL = `http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`;
 
-// add properties to all platforms
-platforms.forEach((platform) => {
-	var name = 'qunit tests - ';
+// https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-MaximumTestDuration
+const PLATFORM_DEFAULTS = {
+	maxDuration: 1800, // seconds, default 1800, max 10800
+	commandTimeout: 300, // seconds, default 300, max 600
+	idleTimeout: idleTimeout, // seconds, default 90, max 1000
+
+	// https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-BuildNumbers
+	build: process.env.TRAVIS_JOB_ID,
+
+	// make sure jobs use tunnel provied by sauce_connect
+	// https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-IdentifiedTunnels
+	tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER
+};
+
+module.exports = function({ urls, platforms }) {
+	var tests = [];
+	var driver = webdriver.remote(SAUCELABS_URL);
+
+	urls.forEach(urlObj => {
+		var testName = urlObj.name || DEFAULT_TEST_NAME;
+		var urlPlatforms = urlObj.platforms || platforms;
+
+		urlPlatforms.forEach(platform => {
+			tests.push(makeTest({
+				driver: driver,
+				url: urlObj.url,
+				platform: processPlatform(testName, platform)
+			}));
+		});
+	});
+
+	series(tests, () => {
+		console.log(`All tests completed with status ${allPlatformsPassed}`);
+
+		driver.quit(() => {
+			process.exit(allPlatformsPassed ? 0 : 1);
+		});
+	});
+};
+
+function processPlatform(testName, platform) {
+	var name = `${testName} - `;
 
 	name += platform.deviceName ? platform.deviceName + ' ' : '';
 	name += platform.platform ? platform.platform + ' ' : '';
@@ -72,45 +72,14 @@ platforms.forEach((platform) => {
 	name += platform.browserName ? platform.browserName + ' ' : '';
 	name += platform.version ? platform.version + ' ' : '';
 
-	Object.assign(platform, {
+	return Object.assign({}, PLATFORM_DEFAULTS, platform, {
 		name: name,
-
-		// https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-MaximumTestDuration
-		maxDuration: 1800,// seconds, default 1800, max 10800
-		commandTimeout: 300,// seconds, default 300, max 600
-		idleTimeout: idleTimeout,// seconds, default 90, max 1000
-
-		// https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-BuildNumbers
-		build: process.env.TRAVIS_JOB_ID,
-
-		// make sure jobs use tunnel provied by sauce_connect
-		// https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-IdentifiedTunnels
-		tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER
 	});
-});
-
-// array of test functions
-var tests = [];
-
-platforms.forEach((platform) => {
-	tests.push(makeTest(platform));
-});
-
-var url = `http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`;
-var driver = webdriver.remote(url);
-
-series(tests, () => {
-	console.log(`All tests completed with status ${allPlatformsPassed}`);
-
-	driver.quit(() => {
-		process.exit(allPlatformsPassed ? 0 : 1);
-	});
-});
+}
 
 // return a function that will run tests on a given platform
-function makeTest(platform) {
+function makeTest({ url, platform, driver }) {
 	return function(cb) {
-		var url = 'http://localhost:3000/test/test.html?hidepassed';
 		var jobTimeoutId, initTimeoutId;
 
 		console.log(`Running ${platform.name}`);

@@ -4,7 +4,7 @@
   "description": "Runs test pages on Saucelabs",
   "main": "index.js",
   "scripts": {
-    "test": "eslint index.js"
+    "test": "eslint index.js && mocha test"
   },
   "repository": {
     "type": "git",
@@ -17,7 +17,8 @@
   },
   "homepage": "https://github.com/bitovi/test-saucelabs#readme",
   "devDependencies": {
-    "eslint": "^3.19.0"
+    "eslint": "^3.19.0",
+    "mocha": "^3.2.0"
   },
   "eslintConfig": {
     "extends": "eslint:recommended",
