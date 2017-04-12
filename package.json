@@ -1,0 +1,39 @@
+{
+  "name": "test-saucelabs",
+  "version": "0.0.1",
+  "description": "Runs test pages on Saucelabs",
+  "main": "index.js",
+  "scripts": {
+    "test": "eslint index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bitovi/test-saucelabs.git"
+  },
+  "author": "Bitovi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bitovi/test-saucelabs/issues"
+  },
+  "homepage": "https://github.com/bitovi/test-saucelabs#readme",
+  "devDependencies": {
+    "eslint": "^3.19.0"
+  },
+  "eslintConfig": {
+    "extends": "eslint:recommended",
+    "rules": {
+      "no-param-reassign": "error",
+      "no-console": "off"
+    },
+    "env": {
+      "node": true,
+      "es6": true
+    },
+    "globals": {}
+  },
+  "dependencies": {
+    "async": "^2.3.0",
+    "saucelabs": "^1.4.0",
+    "wd": "^1.2.0"
+  }
+}
