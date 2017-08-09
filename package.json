@@ -1,13 +1,13 @@
 {
   "name": "test-saucelabs",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "description": "Runs test pages on Saucelabs",
   "main": "index.js",
   "scripts": {
     "test": "eslint index.js && mocha test",
     "preversion": "npm test",
-    "version": "git commit -am \"Update dist for release\" && git checkout -b release && git add -f dist/",
-    "postversion": "git push --tags && git checkout master && git branch -D release && git push",
+    "version": "git commit -am \"Update version for release\"",
+    "postversion": "git push --tags && git push",
     "release:pre": "npm version prerelease && npm publish --tag pre",
     "release:patch": "npm version patch && npm publish",
     "release:minor": "npm version minor && npm publish",
