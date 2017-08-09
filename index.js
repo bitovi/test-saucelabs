@@ -7,6 +7,9 @@ var SauceLabs = require('saucelabs');
 // status of tests on all platforms
 var allPlatformsPassed = true;
 
+// Allow tests to succeed when 0 out of 0 tests pass
+var allowZeroAssertions = false;
+
 // amount of time between polling Sauce Labs Job (ms)
 var statusPollingInterval = 10000;
 
@@ -176,7 +179,7 @@ function makeTest({ url, platform, driver }) {
 						return;
 					}
 
-					var allTestsPassed = (passed === total && failed === "0");
+					var allTestsPassed = (passed === total && failed === "0" && (total !== 0 || allowZeroAssertions));
 
 					console.log(`\nPassed: ${allTestsPassed} (${passed} / ${total})\n`);
 					testComplete(allTestsPassed);
