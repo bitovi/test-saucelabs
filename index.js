@@ -7,6 +7,9 @@ var SauceLabs = require('saucelabs');
 // status of tests on all platforms
 var allPlatformsPassed = true;
 
+// Allow tests to succeed when 0 out of 0 tests pass
+var allowZeroAssertions = true;
+
 // amount of time between polling Sauce Labs Job (ms)
 var statusPollingInterval = 10000;
 
@@ -36,8 +39,9 @@ const PLATFORM_DEFAULTS = {
 	tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER
 };
 
-module.exports = function({ urls, platforms }) {
+module.exports = function({ urls, platforms, zeroAssertionsPass }) {
 	var tests = [];
+	allowZeroAssertions = zeroAssertionsPass === undefined ? allowZeroAssertions : zeroAssertionsPass;
 	var driver = webdriver.remote(SAUCELABS_URL);
 
 	urls.forEach(urlObj => {
@@ -176,7 +180,7 @@ function makeTest({ url, platform, driver }) {
 						return;
 					}
 
-					var allTestsPassed = (passed === total && failed === "0");
+					var allTestsPassed = (passed === total && failed === "0" && (total !== '0' || allowZeroAssertions));
 
 					console.log(`\nPassed: ${allTestsPassed} (${passed} / ${total})\n`);
 					testComplete(allTestsPassed);
