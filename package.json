@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "eslint index.js && mocha test",
-    "preversion": "npm test && npm run build",
+    "preversion": "npm test",
     "version": "git commit -am \"Update dist for release\" && git checkout -b release && git add -f dist/",
     "postversion": "git push --tags && git checkout master && git branch -D release && git push",
     "release:pre": "npm version prerelease && npm publish --tag=pre",
