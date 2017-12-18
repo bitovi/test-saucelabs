@@ -13,9 +13,6 @@ var allowZeroAssertions = true;
 // amount of time between polling Sauce Labs Job (ms)
 var statusPollingInterval = 10000;
 
-// timeout if nothing happens in 300 seconds
-var idleTimeout = 300;
-
 // sauce labs account
 var account = new SauceLabs({
 	username: process.env.SAUCE_USERNAME,
@@ -29,7 +26,7 @@ const SAUCELABS_URL = `http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_
 const PLATFORM_DEFAULTS = {
 	maxDuration: 1800, // seconds, default 1800, max 10800
 	commandTimeout: 300, // seconds, default 300, max 600
-	idleTimeout: idleTimeout, // seconds, default 90, max 1000
+	idleTimeout: 300, // seconds, default 90, max 1000
 
 	// https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-BuildNumbers
 	build: process.env.TRAVIS_JOB_ID,
@@ -151,7 +148,7 @@ function makeTest({ url, platform, driver }) {
 			driver.get(url);
 
 			var getElementText = function(selector) {
-				var timeout = idleTimeout * 1000;
+				var timeout = platform.idleTimeout * 1000;
 				var pollingFrequency = 2000;
 
 				return function(callback) {
