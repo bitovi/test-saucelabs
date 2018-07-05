@@ -2,6 +2,7 @@
 
 var webdriver = require('wd');
 var series = require('async/series');
+var parallel = require('async/parallel');
 var SauceLabs = require('saucelabs');
 
 // status of tests on all platforms
@@ -54,7 +55,7 @@ module.exports = function({ urls, platforms, zeroAssertionsPass }) {
 		});
 	});
 
-	series(tests, () => {
+	parallel(tests, () => {
 		console.log(`All tests completed with status ${allPlatformsPassed}`);
 
 		driver.quit(() => {
