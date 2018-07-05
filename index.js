@@ -37,7 +37,7 @@ const PLATFORM_DEFAULTS = {
 	tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER
 };
 
-module.exports = function({ urls, platforms, zeroAssertionsPass }) {
+module.exports = function({ urls, platforms, zeroAssertionsPass, runInSeries }) {
 	const tests = [];
 	const driver = webdriver.remote(SAUCELABS_URL);
 
@@ -56,13 +56,19 @@ module.exports = function({ urls, platforms, zeroAssertionsPass }) {
 		});
 	});
 
-	parallel(tests, () => {
+	const complete = () => {
 		console.log(`All tests completed. Status: ${allPlatformsPassed ? "Passed" : "Failed"}.`);
 
 		driver.quit(() => {
 			process.exit(allPlatformsPassed ? 0 : 1);
 		});
-	});
+	};
+
+	if (runInSeries) {
+		series(tests, complete);
+	} else {
+		parallel(tests, complete);
+	}
 };
 
 function processPlatform(testName, platform) {
