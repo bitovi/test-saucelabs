@@ -1,20 +1,21 @@
 'use strict';
 
-var webdriver = require('wd');
-var series = require('async/series');
-var SauceLabs = require('saucelabs');
+const webdriver = require('wd');
+const series = require('async/series');
+const parallel = require('async/parallel');
+const SauceLabs = require('saucelabs');
 
 // status of tests on all platforms
-var allPlatformsPassed = true;
+let allPlatformsPassed = true;
 
 // Allow tests to succeed when 0 out of 0 tests pass
-var allowZeroAssertions = true;
+let allowZeroAssertions = true;
 
 // amount of time between polling Sauce Labs Job (ms)
-var statusPollingInterval = 10000;
+let statusPollingInterval = 10000;
 
 // sauce labs account
-var account = new SauceLabs({
+const account = new SauceLabs({
 	username: process.env.SAUCE_USERNAME,
 	password: process.env.SAUCE_ACCESS_KEY
 });
@@ -37,13 +38,14 @@ const PLATFORM_DEFAULTS = {
 };
 
 module.exports = function({ urls, platforms, zeroAssertionsPass }) {
-	var tests = [];
+	const tests = [];
+	const driver = webdriver.remote(SAUCELABS_URL);
+
 	allowZeroAssertions = zeroAssertionsPass === undefined ? allowZeroAssertions : zeroAssertionsPass;
-	var driver = webdriver.remote(SAUCELABS_URL);
 
 	urls.forEach(urlObj => {
-		var testName = urlObj.name || DEFAULT_TEST_NAME;
-		var urlPlatforms = urlObj.platforms || platforms;
+		const testName = urlObj.name || DEFAULT_TEST_NAME;
+		const urlPlatforms = urlObj.platforms || platforms;
 
 		urlPlatforms.forEach(platform => {
 			tests.push(makeTest({
@@ -54,8 +56,8 @@ module.exports = function({ urls, platforms, zeroAssertionsPass }) {
 		});
 	});
 
-	series(tests, () => {
-		console.log(`All tests completed with status ${allPlatformsPassed}`);
+	parallel(tests, () => {
+		console.log(`All tests completed. Status: ${allPlatformsPassed ? "Passed" : "Failed"}.`);
 
 		driver.quit(() => {
 			process.exit(allPlatformsPassed ? 0 : 1);
@@ -64,28 +66,33 @@ module.exports = function({ urls, platforms, zeroAssertionsPass }) {
 };
 
 function processPlatform(testName, platform) {
-	var name = `${testName} - `;
+	let platformName = '';
 
-	name += platform.deviceName ? platform.deviceName + ' ' : '';
-	name += platform.platform ? platform.platform + ' ' : '';
-	name += platform.platformName ? platform.platformName + ' ' : '';
-	name += platform.platformVersion ? platform.platformVersion + ' ' : '';
-	name += platform.browserName ? platform.browserName + ' ' : '';
-	name += platform.version ? platform.version + ' ' : '';
+	platformName += platform.deviceName ? platform.deviceName + ' ' : '';
+	platformName += platform.platform ? platform.platform + ' ' : '';
+	platformName += platform.platformName ? platform.platformName + ' ' : '';
+	platformName += platform.platformVersion ? platform.platformVersion + ' ' : '';
+	platformName += platform.browserName ? platform.browserName + ' ' : '';
+	platformName += platform.version ? platform.version + ' ' : '';
 
 	return Object.assign({}, PLATFORM_DEFAULTS, platform, {
-		name: name,
+		name: `${testName} (${platformName.trim()})`
 	});
+}
+
+let keepAliveTimeoutId;
+function initKeepAlive() {
+	// add indicator that drivers are being initialized to keep Travis from timing out
+	process.stdout.write('>');
+	keepAliveTimeoutId = setTimeout(initKeepAlive, statusPollingInterval);
 }
 
 // return a function that will run tests on a given platform
 function makeTest({ url, platform, driver }) {
 	return function(cb) {
-		var jobTimeoutId, initTimeoutId;
+		let jobTimeoutId;
 
-		console.log(`Running ${platform.name}`);
-
-		var testComplete = function(status) {
+		const testComplete = function(status) {
 			if (jobTimeoutId) {
 				clearTimeout(jobTimeoutId);
 			}
@@ -103,14 +110,10 @@ function makeTest({ url, platform, driver }) {
 			cb(null);
 		};
 
-		var initKeepAlive = function() {
-			// add indicator that driver is being initialized to keep Travis from timing out
-			process.stdout.write('>');
 
-			initTimeoutId = setTimeout(initKeepAlive, statusPollingInterval);
-		};
-
-		initKeepAlive();
+		if (!keepAliveTimeoutId) {
+			initKeepAlive();
+		}
 
 		driver.init(platform, (err, sessionId) => {
 			if (err) {
@@ -118,13 +121,14 @@ function makeTest({ url, platform, driver }) {
 				testComplete(false);
 				return;
 			}
-			console.log(`\nSauce Labs Job: https://saucelabs.com/jobs/${sessionId}`);
 
-			if (initTimeoutId) {
-				clearTimeout(initTimeoutId);
+			if (keepAliveTimeoutId) {
+				clearTimeout(keepAliveTimeoutId);
 			}
 
-			var pollSauceLabsStatus = function() {
+			console.log(`\nJob URL for ${platform.name}: https://saucelabs.com/jobs/${sessionId}`);
+
+			const pollSauceLabsStatus = function() {
 				account.showJob(sessionId, (err, job) => {
 					if (err) {
 						console.log(`\nError calling account.showJob: ${err}`);
@@ -144,12 +148,11 @@ function makeTest({ url, platform, driver }) {
 				});
 			};
 
-			console.log(`Opening: ${url}`);
 			driver.get(url);
 
-			var getElementText = function(selector) {
-				var timeout = platform.idleTimeout * 1000;
-				var pollingFrequency = 2000;
+			const getElementText = function(selector) {
+				const timeout = platform.idleTimeout * 1000;
+				const pollingFrequency = 2000;
 
 				return function(callback) {
 					driver
@@ -165,7 +168,7 @@ function makeTest({ url, platform, driver }) {
 				};
 			};
 
-			var checkTestResults = function() {
+			const checkTestResults = function() {
 				series([
 					getElementText('#qunit-testresult .passed'),
 					getElementText('#qunit-testresult .failed'),
@@ -177,9 +180,9 @@ function makeTest({ url, platform, driver }) {
 						return;
 					}
 
-					var allTestsPassed = (passed === total && failed === "0" && (total !== '0' || allowZeroAssertions));
+					const allTestsPassed = (passed === total && failed === "0" && (total !== '0' || allowZeroAssertions));
 
-					console.log(`\nPassed: ${allTestsPassed} (${passed} / ${total})\n`);
+					console.log(`\nResults for ${platform.name}: ${allTestsPassed ? "Passed" : "Failed"} (${passed} / ${total}).`);
 					testComplete(allTestsPassed);
 				});
 			};
