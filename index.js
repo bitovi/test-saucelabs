@@ -57,7 +57,7 @@ module.exports = function({ urls, platforms, zeroAssertionsPass, runInSeries }) 
 	});
 
 	const complete = () => {
-		console.log(`All tests completed. Status: ${allPlatformsPassed ? "Passed" : "Failed"}.`);
+		console.log(`\nAll tests completed. Status: ${allPlatformsPassed ? "Passed" : "Failed"}.`);
 
 		driver.quit(() => {
 			process.exit(allPlatformsPassed ? 0 : 1);
@@ -101,6 +101,7 @@ function makeTest({ url, platform, driver }) {
 		const testComplete = function(status) {
 			if (jobTimeoutId) {
 				clearTimeout(jobTimeoutId);
+				jobTimeoutId = null;
 			}
 
 			// update status of this platform's tests
@@ -123,26 +124,27 @@ function makeTest({ url, platform, driver }) {
 
 		driver.init(platform, (err, sessionId) => {
 			if (err) {
-				console.log(`Error calling driver.init: ${err}`);
+				console.log(`\n${platform.name} driver.init Error: "${err}"`);
 				testComplete(false);
 				return;
 			}
 
 			if (keepAliveTimeoutId) {
 				clearTimeout(keepAliveTimeoutId);
+				keepAliveTimeoutId = null;
 			}
 
-			console.log(`\nJob URL for ${platform.name}: https://saucelabs.com/jobs/${sessionId}`);
+			console.log(`\n${platform.name} Job URL: https://saucelabs.com/jobs/${sessionId}`);
 
 			const pollSauceLabsStatus = function() {
 				account.showJob(sessionId, (err, job) => {
 					if (err) {
-						console.log(`\nError calling account.showJob: ${err}`);
+						console.log(`\n${platform.name} account.showJob Error: "${err}"`);
 						return;
 					}
 
 					if (job.error) {
-						console.log(`\nJob Error: ${job.error}`);
+						console.log(`\n${platform.name} job Error: "${job.error}"`);
 						testComplete(false);
 						return;
 					}
@@ -181,14 +183,14 @@ function makeTest({ url, platform, driver }) {
 					getElementText('#qunit-testresult .total')
 				], (err, [passed, failed, total]) => {
 					if (err) {
-						console.log(`\nError checking test results: ${err}`);
+						console.log(`\n${platform.name} test results Error: "${err}"`);
 						testComplete(false);
 						return;
 					}
 
 					const allTestsPassed = (passed === total && failed === "0" && (total !== '0' || allowZeroAssertions));
 
-					console.log(`\nResults for ${platform.name}: ${allTestsPassed ? "Passed" : "Failed"} (${passed} / ${total}).`);
+					console.log(`\n${platform.name} Results: ${allTestsPassed ? "Passed" : "Failed"} (${passed} / ${total}).`);
 					testComplete(allTestsPassed);
 				});
 			};
