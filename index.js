@@ -101,6 +101,7 @@ function makeTest({ url, platform, driver }) {
 		const testComplete = function(status) {
 			if (jobTimeoutId) {
 				clearTimeout(jobTimeoutId);
+				jobTimeoutId = null;
 			}
 
 			// update status of this platform's tests
@@ -130,6 +131,7 @@ function makeTest({ url, platform, driver }) {
 
 			if (keepAliveTimeoutId) {
 				clearTimeout(keepAliveTimeoutId);
+				keepAliveTimeoutId = null;
 			}
 
 			console.log(`\n${platform.name} Job URL: https://saucelabs.com/jobs/${sessionId}`);
