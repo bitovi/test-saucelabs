@@ -37,7 +37,7 @@ const PLATFORM_DEFAULTS = {
 	tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER
 };
 
-module.exports = function({ urls, platforms, zeroAssertionsPass, runInSeries }) {
+module.exports = function({ urls, platforms, zeroAssertionsPass, runInParallel }) {
 	const tests = [];
 	const driver = webdriver.remote(SAUCELABS_URL);
 
@@ -64,10 +64,10 @@ module.exports = function({ urls, platforms, zeroAssertionsPass, runInSeries }) 
 		});
 	};
 
-	if (runInSeries) {
-		series(tests, complete);
-	} else {
+	if (runInParallel) {
 		parallel(tests, complete);
+	} else {
+		series(tests, complete);
 	}
 };
 
