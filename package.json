@@ -1,6 +1,6 @@
 {
   "name": "test-saucelabs",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Runs test pages on Saucelabs",
   "main": "index.js",
   "scripts": {
