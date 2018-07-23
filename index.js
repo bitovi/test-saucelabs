@@ -23,6 +23,10 @@ const account = new SauceLabs({
 const DEFAULT_TEST_NAME = 'qunit tests';
 const SAUCELABS_URL = `http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`;
 
+const RETRY_ERROR = { type: "RETRY" };
+const MAX_RETRIES = 10;
+let retryCount = 0;
+
 // https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options#TestConfigurationOptions-MaximumTestDuration
 const PLATFORM_DEFAULTS = {
 	maxDuration: 1800, // seconds, default 1800, max 10800
@@ -166,10 +170,15 @@ function makeTest({ url, platform, driver }) {
 					driver
 						.waitForElementsByCssSelector(selector, timeout, pollingFrequency, (err, el) => {
 							if (err) {
+								console.log(`\nwaitForElementsByCssSelector Error: "${err}"`);
 								return callback(err);
 							}
 
 							driver.text(el, (err, text) => {
+								// handle expected StaleElementReference error by retrying
+								if(err && err.cause && err.cause.value["class"] === "org.openqa.selenium.StaleElementReferenceException") {
+									return cb(RETRY_ERROR);
+								}
 								callback(err ? err : null, text);
 							});
 						});
@@ -183,6 +192,12 @@ function makeTest({ url, platform, driver }) {
 					getElementText('#qunit-testresult .total')
 				], (err, [passed, failed, total]) => {
 					if (err) {
+						if (err === RETRY_ERROR && retryCount++ < MAX_RETRIES) {
+							console.log(`StaleElementReference Error. Retrying. Retry Count: ${retryCount}.`);
+							setTImeout(checkTestResults, 2000);
+							return;
+						}
+
 						console.log(`\n${platform.name} test results Error: "${err}"`);
 						testComplete(false);
 						return;
