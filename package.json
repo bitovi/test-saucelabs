@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/bitovi/test-saucelabs#readme",
   "devDependencies": {
-    "eslint": "^3.19.0",
+    "eslint": "^6.6.0",
     "mocha": "^3.2.0"
   },
   "eslintConfig": {
